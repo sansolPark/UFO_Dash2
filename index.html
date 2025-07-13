@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>UFO Dash</title>
     <style>
-        /* 기본 스타일 및 폰트 설정 */
         body {
             margin: 0;
             padding: 0;
@@ -19,30 +18,24 @@
             color: white;
         }
 
-        /* 게임 컨테이너 스타일 */
         #gameContainer {
             position: relative;
             border: 2px solid #ff5722;
             background: #1a1a1a;
             box-shadow: 0 0 25px rgba(255, 87, 34, 0.4);
-            /* 모바일 화면에 맞게 최대 너비 설정 */
             max-width: 100%;
         }
 
-        /* 게임 캔버스 스타일 */
         #gameCanvas {
             display: block;
             background: #111;
-            /* 픽셀 아트가 깨지지 않도록 렌더링 설정 */
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
-            /* 캔버스가 컨테이너에 맞게 크기 조절 */
             width: 100%;
             height: auto;
         }
 
-        /* UI 요소 스타일 */
         .ui-element {
             position: absolute;
             text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
@@ -68,11 +61,10 @@
 </head>
 <body>
     <div id="gameContainer">
-        <!-- 게임이 그려질 캔버스. 너비와 높이는 JS에서 설정 -->
         <canvas id="gameCanvas" width="800" height="450"></canvas>
         <div id="instructions" class="ui-element">
-            PC: Spacebar<br>
-            Mobile: Touch
+            PC: Spacebar(점프), →(부스터)<br>
+            Mobile: Touch(점프)
         </div>
         <div id="timer" class="ui-element">Time: 0s</div>
     </div>
@@ -98,13 +90,16 @@
         const BASE_SCROLL_SPEED = 2.5;
         let currentScrollSpeed = BASE_SCROLL_SPEED;
 
+        // 부스터(오른쪽 방향키) 기능 변수
+        let isRightKeyPressed = false;
+
         // =========== UFO 캐릭터 클래스 ===========
         class UFO {
             constructor() {
                 this.width = 40;
                 this.height = 20;
                 this.x = 100;
-                this.y = 350 - this.height; // 지면에 맞춰 시작 y좌표 설정
+                this.y = 350 - this.height;
                 this.velocityY = 0;
                 this.gravity = 0.5;
                 this.jumpPower = -11;
@@ -116,27 +111,23 @@
                 this.groundY = 350 - this.height;
             }
 
-            // UFO 그리기 (픽셀 아트 스타일)
             draw() {
                 ctx.save();
                 ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
                 ctx.rotate(this.rotation);
 
-                // UFO 본체 (반원 모양)
                 ctx.fillStyle = '#aaccff';
-                ctx.fillRect(-20, -5, 40, 10); // Main body
+                ctx.fillRect(-20, -5, 40, 10);
                 ctx.fillStyle = '#d4eaff';
-                ctx.fillRect(-15, -8, 30, 3);  // Highlight
+                ctx.fillRect(-15, -8, 30, 3);
                 ctx.fillStyle = '#88aadd';
-                ctx.fillRect(-15, 5, 30, 3);   // Shadow
+                ctx.fillRect(-15, 5, 30, 3);
 
-                // UFO 돔
                 ctx.fillStyle = '#e0f7fa';
                 ctx.beginPath();
                 ctx.arc(0, -5, 12, Math.PI, 0);
                 ctx.fill();
 
-                // UFO 하단 빛
                 ctx.fillStyle = 'rgba(255, 255, 136, 0.5)';
                 ctx.beginPath();
                 ctx.moveTo(-15, 5);
@@ -148,11 +139,9 @@
 
                 ctx.restore();
 
-                // 파티클 그리기
                 this.particles.forEach(p => p.draw());
             }
 
-            // 점프 로직
             jump() {
                 if (this.onGround) {
                     this.velocityY = this.jumpPower;
@@ -162,12 +151,11 @@
                 } else if (this.canDoubleJump) {
                     this.velocityY = this.doubleJumpPower;
                     this.canDoubleJump = false;
-                    this.rotation = Math.PI * 2; // 2단 점프 시 한 바퀴 회전
+                    this.rotation = Math.PI * 2;
                     this.createParticles(12, '#ffff88');
                 }
             }
             
-            // 파티클 생성
             createParticles(count, color) {
                 for (let i = 0; i < count; i++) {
                     this.particles.push(new Particle(
@@ -178,19 +166,17 @@
                 }
             }
             
-            // 클리어 시 로켓 파티클
             createClearParticles() {
                 for (let i = 0; i < 5; i++) {
                      this.particles.push(new Particle(
                         this.x + this.width / 2,
                         this.y + this.height,
                         ['#ff4444', '#ffaa44', '#ffff44'][Math.floor(Math.random() * 3)],
-                        true // isFire
+                        true
                     ));
                 }
             }
 
-            // UFO 상태 업데이트
             update() {
                 this.velocityY += this.gravity;
                 this.y += this.velocityY;
@@ -267,12 +253,11 @@
                 this.width = 30;
                 this.height = type === 'giant' ? 50 * 1.7 : 50;
                 this.x = canvas.width;
-                this.y = 350; // 지면의 y좌표
+                this.y = 350;
                 this.type = type;
                 this.animFrame = Math.random() * 100;
             }
 
-            // 몬스터 그리기 (외계 식물 모양)
             draw() {
                 ctx.save();
                 const scale = this.type === 'giant' ? 1.7 : 1;
@@ -280,23 +265,19 @@
                 const stemHeight = 25 * scale;
                 const bottomY = this.y;
 
-                // 줄기
                 ctx.fillStyle = '#5d995d';
                 ctx.fillRect(this.x + 10, bottomY - stemHeight, 10, stemHeight);
                 
-                // 몸체 (머리)
                 ctx.fillStyle = '#8bc34a';
                 ctx.beginPath();
                 ctx.arc(this.x + 15, bottomY - stemHeight, 15, Math.PI, 0);
                 ctx.fill();
 
-                // 입 (애니메이션)
                 ctx.fillStyle = '#3e2723';
                 const mouthOffset = bottomY - stemHeight - (5 * scale);
                 const mouthHeight = 4 * scale + Math.sin(this.animFrame * 0.1) * 4 * scale;
                 ctx.fillRect(this.x + 8, mouthOffset, 14, mouthHeight);
                 
-                // 눈
                 ctx.fillStyle = '#c62828';
                 ctx.fillRect(this.x + 20, bottomY - stemHeight - (10 * scale), 4, 4);
 
@@ -305,17 +286,20 @@
             }
 
             update() {
-                this.x -= currentScrollSpeed;
+                // 몬스터의 이동 속도도 부스터 영향 받게 하려면 아래처럼 수정!
+                let effectiveScrollSpeed = currentScrollSpeed;
+                if (isRightKeyPressed) effectiveScrollSpeed *= 2;
+                this.x -= effectiveScrollSpeed;
             }
 
             getBounds() {
                 const scale = this.type === 'giant' ? 1.7 : 1;
-                const totalHeight = (25 * scale) + (25 * scale); // 줄기+몸체
+                const totalHeight = (25 * scale) + (25 * scale);
                 return {
                     x: this.x + 4,
                     y: this.y - totalHeight,
                     width: this.width - 8,
-                    height: totalHeight - 5 // 위쪽 여유 공간
+                    height: totalHeight - 5
                 };
             }
         }
@@ -330,6 +314,7 @@
                 this.color = color;
             }
             update() {
+                // 별의 이동은 원래 속도로 유지 (부스터 영향 X)
                 this.x -= this.speed;
                 if (this.x < -this.size) {
                     this.x = canvas.width + this.size;
@@ -359,7 +344,6 @@
 
         // =========== 배경 그리기 함수 ===========
         function drawBackground() {
-            // 밤하늘 그라데이션
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             gradient.addColorStop(0, '#0d0a1a');
             gradient.addColorStop(0.6, '#2a1a3a');
@@ -367,10 +351,8 @@
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // 별 그리기
             stars.forEach(s => { s.update(); s.draw(); });
 
-            // 지면 그리기 (울퉁불퉁한 느낌)
             ctx.fillStyle = '#6d4c41';
             ctx.beginPath();
             ctx.moveTo(0, 350);
@@ -386,13 +368,11 @@
 
         // =========== 몬스터 스폰 및 난이도 조절 ===========
         function manageDifficulty(time) {
-            // **수정**: 요청에 맞게 난이도 상승 구간 및 시작 속도 재조정
             if (time >= 90) {
                 currentScrollSpeed = BASE_SCROLL_SPEED * 2.0;
             } else if (time >= 60) {
                 currentScrollSpeed = BASE_SCROLL_SPEED * 1.5;
             } else {
-                // 0-59초 구간은 1.2배 속도로 유지 (시작 속도 및 30초 이후 속도 포함)
                 currentScrollSpeed = BASE_SCROLL_SPEED * 1.2;
             }
 
@@ -400,10 +380,9 @@
             
             if (Date.now() - lastMonsterSpawnTime > spawnInterval * (0.75 + Math.random() * 0.5)) {
                 let monsterType = 'basic';
-                // **수정**: 몬스터 등장 시점 재조정
-                if (time >= 30) { // 30초 후부터 랜덤
+                if (time >= 30) {
                     monsterType = Math.random() < 0.4 ? 'giant' : 'basic';
-                } else if (time >= 10) { // 10초 후부터 거대 몬스터만 등장
+                } else if (time >= 10) {
                     monsterType = 'giant';
                 }
                 monsters.push(new Monster(monsterType));
@@ -448,7 +427,10 @@
                 survivalTime = (Date.now() - gameStartTime) / 1000;
                 timerElement.textContent = `Time: ${Math.floor(survivalTime)}s`;
                 
-                backgroundOffset += currentScrollSpeed;
+                // 오른쪽 키가 눌리면 부스터 발동!
+                let effectiveScrollSpeed = currentScrollSpeed;
+                if (isRightKeyPressed) effectiveScrollSpeed *= 2;
+                backgroundOffset += effectiveScrollSpeed;
                 
                 manageDifficulty(survivalTime);
                 
@@ -466,7 +448,6 @@
                     }
                 }
 
-                // **수정**: 게임 클리어 시간 100초로 변경
                 if (survivalTime >= 100) { 
                     gameState = 'gameCleared';
                 }
@@ -475,7 +456,6 @@
             ufo.draw();
             monsters.forEach(m => m.draw());
             
-            // 게임 상태별 메시지
             ctx.textAlign = 'center';
             ctx.fillStyle = 'white';
             if (gameState === 'waiting') {
@@ -492,7 +472,7 @@
                 ctx.fillText(`Survived: ${Math.floor(survivalTime)} seconds`, canvas.width/2, canvas.height/2 + 30);
                 ctx.fillText('Press Space or Touch to Restart', canvas.width / 2, canvas.height / 2 + 60);
             } else if (gameState === 'gameCleared') {
-                ufo.y -= 2; // UFO 상승
+                ufo.y -= 2;
                 ufo.x += 1;
                 ufo.createClearParticles();
                 
@@ -502,7 +482,6 @@
                 ctx.font = '18px "Courier New"';
                 ctx.fillStyle = 'white';
                 ctx.fillText('You escaped the planet!', canvas.width / 2, canvas.height / 2 + 30);
-                // **수정**: 클리어 시간 메시지 추가
                 ctx.fillText('Survived for 100 seconds!', canvas.width / 2, canvas.height / 2 + 55);
             }
             
@@ -531,10 +510,18 @@
             }
         }
         
+        // Spacebar(점프), 오른쪽 방향키(부스터)
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
                 handleInput();
+            } else if (e.code === 'ArrowRight') {
+                isRightKeyPressed = true;
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowRight') {
+                isRightKeyPressed = false;
             }
         });
 
@@ -547,7 +534,6 @@
             handleInput();
         });
 
-        // =========== 게임 시작 ===========
         gameLoop();
     </script>
 </body>
